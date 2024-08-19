@@ -59,6 +59,7 @@ class ResNet(nn.Module):
         # define the average pooling layer and the fully connected layer
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.dropout = nn.Dropout(p=0.5)
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
         """
@@ -108,6 +109,7 @@ class ResNet(nn.Module):
 
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
+        x = self.dropout(x)  # Apply dropout for regularization
         x = self.fc(x)
         return x
 
