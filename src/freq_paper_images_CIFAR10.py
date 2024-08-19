@@ -9,7 +9,7 @@ import sys
 import os
 import numpy as np
 import random
-
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from pathlib import Path
 
 # Append the parent directory to sys.path to import your custom classes
@@ -41,8 +41,9 @@ os.makedirs(save_dir, exist_ok=True)
 # Define transformations
 transform = transforms.Compose([
     transforms.Resize((224, 224)),  # Resize CIFAR-10 images to 224x224
+    transforms.RandomHorizontalFlip(),            # Randomly flip horizontally
+    transforms.RandomRotation(15),                # Random rotation within a range
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
 # Use your custom Dataset class to load CIFAR-10 data
@@ -56,10 +57,11 @@ test_loader = DataLoader(test_data, batch_size=64, shuffle=True)
 # Initialize the model, loss function, and optimizer
 model = ResNet34(num_classes=10).to('cuda')
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+scheduler = ReduceLROnPlateau(optimizer, 'min', patience=10, factor=0.5)
 
 # Number of epochs
-epochs = 50
+epochs = 100
 
 # File to save the results
 results_file = "../Results/training_results.csv"
@@ -126,6 +128,10 @@ for epoch in range(epochs):
             correct_test += (predicted == labels).sum().item()
             all_labels_test.extend(labels.cpu().numpy())
             all_preds_test.extend(predicted.cpu().numpy())
+        
+        scheduler.step(running_test_loss)  # Update the learning rate
+
+
 
     # Calculate F1-score for testing
     f1_test = f1_score(all_labels_test, all_preds_test, average='weighted')
@@ -137,6 +143,7 @@ for epoch in range(epochs):
     # Improved print formatting
     print("="*50)
     print(f"Epoch {epoch + 1}/{epochs}")
+    print(f'Learning Rate: {optimizer.param_groups[0]["lr"]:.6f}')
     print("-"*50)
     print(f"Train Loss:     {average_train_loss:.4f} | Train Accuracy:     {accuracy_train:.2f}% | Train F1-Score:     {f1_train:.2f}")
     print(f"Test Loss:      {average_test_loss:.4f}  | Test Accuracy:      {accuracy_test:.2f}% | Test F1-Score:      {f1_test:.2f}")
@@ -150,6 +157,10 @@ for epoch in range(epochs):
         writer.writerow([epoch + 1, average_train_loss, accuracy_train, f1_train, average_test_loss, accuracy_test, f1_test])
 
     # Save the model's state dictionary
-    model_save_path = os.path.join(save_dir, f"resnet34_cifar10_epoch{epoch}.pth")
-    torch.save(model.state_dict(), model_save_path)
+    if epoch <=10:
+        continue
+    
+    model_save_path = os.path.join(save_dir, f"resnet34_cifar10v2_epoch{epoch}.pth")
     print(f"Model saved to {model_save_path}")
+    torch.save(model.state_dict(), model_save_path)
+

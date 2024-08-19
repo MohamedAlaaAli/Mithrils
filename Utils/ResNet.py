@@ -109,7 +109,7 @@ class ResNet(nn.Module):
 
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
-        x = self.dropout(x)  # Apply dropout for regularization
+        #x = self.dropout(x)  # Apply dropout for regularization
         x = self.fc(x)
         return x
 
