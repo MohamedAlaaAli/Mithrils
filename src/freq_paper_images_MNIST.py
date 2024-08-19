@@ -38,7 +38,7 @@ from Utils.ResNet import ResNet34
 save_dir = "../saved_models/cifar100"
 pretrained_model_path = os.path.join(save_dir, "resnet34_cifar100_epoch10.pth")  # Path to the saved CIFAR-10 model
 epochs = 50  # Maximum number of epochs for training on CIFAR-100
-num_classes = 100  # Number of classes in CIFAR-100
+num_classes = 10  # Number of classes in CIFAR-100
 early_stop_patience = 10  # Number of epochs to wait before early stopping
 best_loss = float('inf')  # Initialize best loss as infinity
 early_stop_counter = 0  # Initialize early stopping counter
@@ -47,10 +47,9 @@ early_stop_counter = 0  # Initialize early stopping counter
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# Use your custom Dataset class to load CIFAR-10 data
+# Use your custom Dataset class to load MNIST data
 training_data = Dataset(data_dir="../data/MNIST/train", real=True, fourier=False, transform=transform)
 test_data = Dataset(data_dir="../data/MNIST/test", real=True, fourier=False, transform=transform)
 
@@ -59,10 +58,13 @@ test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
 
 # Load the pretrained ResNet34 model
 model = ResNet34(num_classes=100)  # Initialize with the original number of classes (CIFAR-10)
-model.load_state_dict(torch.load(pretrained_model_path))  # Load the CIFAR-10 trained weights
+#model.load_state_dict(torch.load(pretrained_model_path))  # Load the CIFAR-10 trained weights
 
-# Modify the final layer to output 100 classes (for CIFAR-100)
-model.fc = nn.Linear(model.fc.in_features, num_classes)
+# Modify the final layer to output 10 classes (for MNIST)
+model.fc = nn.Sequential(
+    nn.Dropout(p=0.5),
+    nn.Linear(model.fc.in_features, num_classes)
+)
 model = model.to('cuda')
 
 # Define loss function, optimizer, and learning rate scheduler
@@ -77,7 +79,7 @@ def print_lr(optimizer):
 
 
 # File to save the results
-results_file = "training_results_MNIST.csv"
+results_file = "training_results_MNIST_V2.csv"
 
 # Write the header of the CSV file
 with open(results_file, mode='w', newline='') as file:
@@ -175,7 +177,7 @@ for epoch in range(epochs):
     scheduler.step(average_test_loss)
     print_lr(optimizer)
 
-    # Save the model's state dictionary after training on CIFAR-100
+    # Save the model's state dictionary after training
     model_save_path = os.path.join(save_dir, f"resnet34_MNIST_epoch{epoch + 1}.pth")
     torch.save(model.state_dict(), model_save_path)
     print(f"Model saved to {model_save_path}")
