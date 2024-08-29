@@ -38,7 +38,7 @@ class Dataset(torch.utils.data.Dataset):
     def get_fft_images(self, index):
         img_path, label = self.img_paths[index]
         img = Image.open(img_path).convert("L")
-        img_fft_mag = self.compute_fft(img)
+        img_fft_mag = self.compute_fft(img.to("cuda" if torch.cuda.is_available() else "cpu"))
         return img_fft_mag, label
 
     def get_fusion_images(self, index):
