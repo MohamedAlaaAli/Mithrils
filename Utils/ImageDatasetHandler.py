@@ -38,7 +38,7 @@ class Dataset(torch.utils.data.Dataset):
     def get_fft_images(self, index):
         img_path, label = self.img_paths[index]
         img = Image.open(img_path).convert("L")
-        img_fft_mag = self.compute_fft(img.to("cuda" if torch.cuda.is_available() else "cpu"))
+        img_fft_mag = self.compute_fft(img)
         return img_fft_mag, label
 
     def get_fusion_images(self, index):
@@ -54,7 +54,7 @@ class Dataset(torch.utils.data.Dataset):
 
     def compute_fft(self, img):
         img_tensor = transforms.ToTensor()(img)
-        img_fft = torch.fft.fft2(img_tensor)
+        img_fft = torch.fft.fft2(img_tensor.to("cuda"))
         img_fft_shifted = torch.fft.fftshift(img_fft)
         img_mag = torch.log(torch.abs(img_fft_shifted) + 1e-8)
         img_mag_norm = (img_mag - torch.min(img_mag)) / (torch.max(img_mag) - torch.min(img_mag))
